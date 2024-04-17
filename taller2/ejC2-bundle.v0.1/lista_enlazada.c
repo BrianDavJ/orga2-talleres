@@ -5,7 +5,7 @@
 
 
 lista_t* nueva_lista(void) {
-    lista_t *head =  (lista_t*) malloc (sizeof(lista_t));
+    lista_t *head =  (lista_t*) calloc (sizeof(lista_t),1); // calloc para poder inicializarla, porque malloc me lo da con basura
     return head;
 
 }
@@ -26,15 +26,23 @@ uint32_t longitud(lista_t* lista) {
 
 void agregar_al_final(lista_t* lista, uint32_t* arreglo, uint64_t longitud) {
     nodo_t* act=lista->head;
-    while (act!=NULL){
-        nodo_t* temp=act;
-        act= temp->next; // porque no puedo hacer diecto act=act.next????
-    }
     nodo_t* nuevo_nodo =  (nodo_t*) malloc (sizeof(nodo_t)); // hace falta el (nodo_t*) antes del malloc? 
     nuevo_nodo->longitud=longitud;
     nuevo_nodo->next=NULL;
-    nuevo_nodo->arreglo=arreglo;
-    act->next=nuevo_nodo;
+
+    uint32_t* copy_arr=calloc(sizeof(uint32_t), nuevo_nodo->longitud);
+    nuevo_nodo->arreglo=copy_arr;
+    for(int i = 0; i < longitud ;i++){
+        copy_arr[i] = arreglo[i];
+    }
+
+    if(act !=NULL) {
+        while (act->next!=NULL){
+        nodo_t* temp=act;
+        act= temp->next; // porque no puedo hacer diecto act=act.next????
+        }
+        act->next=nuevo_nodo;
+    }else {lista->head=nuevo_nodo;}   
     
 }
 
@@ -100,6 +108,8 @@ void destruir_lista(lista_t* lista) {
 
         temp=nodo_act;
     }
+    free(temp->arreglo);
     free(temp);
+    
     free(lista);
 }

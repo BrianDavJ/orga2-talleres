@@ -29,7 +29,7 @@ void push_back(vector_t* vector, uint32_t elemento) {
         vector->array[ult_pos] = elemento;
         vector->size +=1;
     } else {
-        uint64_t nueva_cap = vector->capacity+2;
+        uint64_t nueva_cap = vector->capacity*2;
         uint32_t* nuevo_arr = (uint32_t*) realloc(vector->array, sizeof(uint32_t)*nueva_cap); 
         uint64_t ult_pos = vector->size;
         vector->array=nuevo_arr;
@@ -57,7 +57,7 @@ int son_iguales(vector_t* v1, vector_t* v2) {
 }
 
 uint32_t iesimo(vector_t* vector, size_t index) {
-       if(index > vector->size){
+       if(index >= vector->size ){
         return 0;
     } else {
         uint32_t* arr1 = vector->array;

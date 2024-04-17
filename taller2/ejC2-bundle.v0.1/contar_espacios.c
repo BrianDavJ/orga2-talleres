@@ -4,7 +4,7 @@
 uint32_t longitud_de_string(char* string) {
     int i=0;
     int32_t counter=0;
-    if (string==NULL || *string==""){
+    if (string==NULL){
         return 0;
     }
 
