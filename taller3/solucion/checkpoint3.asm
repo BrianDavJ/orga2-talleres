@@ -2,11 +2,10 @@
 
 ;########### ESTOS SON LOS OFFSETS Y TAMAÑO DE LOS STRUCTS
 ; Completar:
-;NODO_LENGTH	EQU	??
-;LONGITUD_OFFSET	EQU	??
-
-;PACKED_NODO_LENGTH	EQU	??
-;PACKED_LONGITUD_OFFSET	EQU	??
+NODO_LENGTH	EQU	32
+LONGITUD_OFFSET	EQU	24
+PACKED_NODO_LENGTH	EQU	28
+PACKED_LONGITUD_OFFSET	EQU	24
 
 ;########### SECCION DE DATOS
 section .data
@@ -20,8 +19,31 @@ global cantidad_total_de_elementos_packed
 
 ;########### DEFINICION DE FUNCIONES
 ;extern uint32_t cantidad_total_de_elementos(lista_t* lista);
-;registros: lista[?]
+;registros: lista[rdi]
 cantidad_total_de_elementos:
+	push rbp
+	mov rbp, rsp
+
+	; guardamos el elemento a sumar
+	; vamos a recorrerlo hasta que next sea null
+
+	xor r9, r9	; va a ser mi contador
+	.ciclo: 
+
+	cmp rdi, 0
+	je .fin
+	
+	mov rsi, [rdi + LONGITUD_OFFSET]	; accedemos a nuestra longitud de nodo
+	add r9, rsi
+
+	add rdi, NODO_LENGTH	; paso al siguiente nodo
+	jmp .ciclo
+
+	.fin:
+
+	mov rax, r9
+
+	pop rbp
 	ret
 
 ;extern uint32_t cantidad_total_de_elementos_packed(packed_lista_t* lista);

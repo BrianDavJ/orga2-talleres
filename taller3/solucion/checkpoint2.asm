@@ -41,17 +41,24 @@ alternate_sum_4_using_c:
 	;prologo
 	push rbp ; alineado a 16
 	mov rbp,rsp
+	; hay que preservar el resto de los registros
+	; porque la funcion no me promete que me los preserve
+
+	push rdx
+	push rcx
+
 
 	CALL restar_c
 	mov rdi,rax
-	mov rsi,rdx
+	mov rsi,[rbp-0x8]
 	CALL sumar_c
 	mov rdi,rax
-	mov rsi,rcx
+	mov rsi,[rbp-0x10]
 	CALL restar_c
 
 
 	;epilogo
+	mov rsp, rbp ; restauramos la pila
 	pop rbp
 	ret
 
@@ -146,6 +153,9 @@ product_9_f:
 	
 	; COMPLETAR
 	; convertimos los enteros en doubles y los multiplicamos por xmm0.
+	; hay que limpiar la parte alta y despues convertimos
+	; el convert es con signo
+	mov esi, esi ; asi se limpia lo dice el manual
 	cvtsi2sd xmm1,rsi
 	cvtsi2sd xmm2,rdx
 	cvtsi2sd xmm3,rcx
