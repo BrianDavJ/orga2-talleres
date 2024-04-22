@@ -32,6 +32,8 @@ strPrint:
 
 ; uint32_t strLen(char* a)
 strLen:
+	
+
 	ret
 
 

@@ -36,7 +36,7 @@ cantidad_total_de_elementos:
 	mov rsi, [rdi + LONGITUD_OFFSET]	; accedemos a nuestra longitud de nodo
 	add r9, rsi
 
-	add rdi, NODO_LENGTH	; paso al siguiente nodo
+	mov rdi, [rdi]	; paso al siguiente nodo
 	jmp .ciclo
 
 	.fin:
@@ -52,7 +52,6 @@ cantidad_total_de_elementos_packed:
 	
 	push rbp
 	mov rbp, rsp
-	sub rsp, 0x1
 
 	; guardamos el elemento a sumar
 	; vamos a recorrerlo hasta que next sea null
@@ -66,7 +65,7 @@ cantidad_total_de_elementos_packed:
 	mov rsi, [rdi + PACKED_LONGITUD_OFFSET]	; accedemos a nuestra longitud de nodo
 	add r9, rsi
 
-	add rdi, PACKED_NODO_LENGTH	; paso al siguiente nodo
+	mov rdi, [rdi]	; paso al siguiente nodo
 	jmp .ciclo
 
 	.fin:
