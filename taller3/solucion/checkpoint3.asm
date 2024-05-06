@@ -4,9 +4,9 @@
 ; Completar:
 NODO_LENGTH	EQU	32
 LONGITUD_OFFSET	EQU	24
-PACKED_NODO_LENGTH	EQU	28
-PACKED_LONGITUD_OFFSET	EQU	20
-
+PACKED_NODO_LENGTH	EQU	21
+PACKED_LONGITUD_OFFSET	EQU	17
+NULL EQU 0
 ;########### SECCION DE DATOS
 section .data
 
@@ -28,20 +28,25 @@ cantidad_total_de_elementos:
 	; vamos a recorrerlo hasta que next sea null
 
 	xor r9, r9	; va a ser mi contador
+	xor rsi, rsi
+	xor rax, rax
+
+	mov r8, [rdi]
+
 	.ciclo: 
 
-	cmp rdi, 0  ; null es 0 en asm
+	cmp r8, 0  ; null es 0 en asm
 	je .fin
 	
-	mov rsi, [rdi + LONGITUD_OFFSET]	; accedemos a nuestra longitud de nodo
+	mov esi, dword [r8 + LONGITUD_OFFSET]	; accedemos a nuestra longitud de nodo
 	add r9, rsi
 
-	mov rdi, [rdi]	; paso al siguiente nodo
+	mov r8, [r8]	; paso al siguiente nodo
 	jmp .ciclo
 
 	.fin:
 
-	mov rax, r9
+	mov eax, r9d
 
 	pop rbp
 	ret
@@ -57,20 +62,26 @@ cantidad_total_de_elementos_packed:
 	; vamos a recorrerlo hasta que next sea null
 
 	xor r9, r9	; va a ser mi contador
+	xor rax, rax
+	xor rsi, rsi
+
+	mov r8, [rdi] ; aca esta el head por eso hay que poner esto
+	
+
 	.ciclo: 
 
-	cmp rdi, 0  ; null es 0 en asm
+	cmp r8, 0  ; null es 0 en asm
 	je .fin
 	
-	mov rsi, [rdi + PACKED_LONGITUD_OFFSET]	; accedemos a nuestra longitud de nodo
-	add r9, rsi
+	mov r9d, dword [r8 + PACKED_LONGITUD_OFFSET]	; accedemos a nuestra longitud de nodo
+	add eax, r9d
 
-	mov rdi, [rdi]	; paso al siguiente nodo
+	mov r8, [r8]	; paso al siguiente nodo
 	jmp .ciclo
 
 	.fin:
 
-	mov rax, r9
+	;mov eax, r9d
 
 	pop rbp
 	ret
