@@ -1,0 +1,38 @@
+Protected mode — This is the native operating mode of the processor. It provides a rich set of architectural features, flexibility, high performance and backward compatibility to existing software base.
+
+
+• Real-address mode — This operating mode provides the programming environment of the Intel 8086 processor, with a few extensions (such as the ability to switch to protected or system management mode).
+
+PREGUNTA 1:
+El modo protegido es el modo de operar del procesador por cómo fue diseñado, cuenta con características arquitecturales diversas (usa el procesador en su maximo potencial), es más flexible, tiene mejor performance y retrocompatibilidad para programas base.
+
+El modo BASE tiene las mismas funciones que el procesador Intel 8086, con algunas extensiones como poder pasar a modo protegido o algunos manejos del sistema. 
+
+PREGUNTA 2
+
+Porque el modo real al no tener características como por ejemplo los privileagios o segmentación de memoria es un modo mucho más inseguro y complicado de manejar. Además de no usar todo el potencial del procesador. 
+Podríamos tener un S.O en modo real pero sería muy inseguro y lento (porque no usa las mejoras técnicas del procesador). 
+
+PREGUNTA 3
+
+GDT: A descriptor table is variable in length and can contain up to 8192 (213 ) 8-byte descriptors. There are two kinds of descriptor tables:
+• The global descriptor table (GDT).
+
+
+Es un array que contiene descriptores. Figura 3-8 Segment Descriptor. 
+Limit:El segmento límite nos dice el máximo offset que nos podemos mover de la Base Address
+Base: Nos define donde empieza (o cuál definimos como el byte 0) el segmento de 4gb). Esta separado en 3 partes, andá a buscarlas
+G Granularidad: determina el escalado del segmento límite. Cuando es 0 el segmento son bytes y cuando esta prendido el segmento es interpretado como una unidad de 4k Bytes. FURFI: establece la medida del campo LIMITE
+P==Present: Define si el segmento esta presente en memoria o en virtual (el disco).
+DPL: Descriptor Priviledge Level -> nivel de privilegio (minimo) q debe tener el segmento que contiene el codigo que pretende acceder a éste segmento
+
+S==System: Si es 1 permite administrar en las tablas de descriptores dos clases de segmentos:
+	 De code o datos 
+	 De sistema
+(sitema) Tienen diferentes formatos y en general no se refieren a zonas de memoria salvo TSS. En general se refiere a mecanismos de uso de recursos del procesador por parte del kernel.
+
+
+PREGUNTA 4	
+1010
+
+
