@@ -73,65 +73,81 @@ temperature_asm:
         movdqu xmm2,xmm1
         pshufb xmm2, [shuffle_img] ;xmm2= [ a g b r a g b r a g b r a g b r]
         
-        pmovzxbw xmm3,xmm0
+        pmovzxbd xmm3,xmm0        ;muevo los primeros 4 bytes (1 pixel) de xmm0 a xmm3 extendiendo de Byte a Word
+        psrldq xmm0,4             ;en xmm3 tengo el primer pixel voy al que sigue
+        PMOVZXBd xmm4, xmm0
+        psrldq xmm0,4
+        PMOVZXBd xmm5, xmm0
+        psrldq xmm0,4
+        pmovzxbd xmm6, xmm0
+        ;hasta acá los pixeles de xmm0 lo mismo para xmm1 
+        pmovzxbd xmm7,xmm1      ;muevo los primeros 4 bytes de xmm0 a xmm3 extendiendo de Byte a dWord
+        psrldq xmm0,4           ;en xmm7 tengo el primer pixel permutado voy al que sigue
+        PMOVZXBd xmm8, xmm1
+        psrldq xmm0,4
+        PMOVZXBd xmm9, xmm1
+        psrldq xmm0,4
+        pmovzxbd xmm10, xmm1
+        ;hago la primer suma entre permutaciones
+        PADDd xmm7, xmm3           ; en cada lugar queda la suma en dwords de r+g+b y 3a
+        PADDd xmm8, xmm4           ; de los primeros 2 pixeles en xmm5
+        paddd xmm9, xmm5
+        paddd xmm10, xmm6
 
-        PMOVZXBW xmm4, xmm1
+        pmovzxbd xmm3,xmm2       ;muevo los primeros 4 bytes de xmm2 a xmm3 extendiendo de Byte a dword
+        psrldq xmm2,4            ;en xmm3 tengo el primer pixel permutado 2 veces voy al que sigue
+        PMOVZXBd xmm4, xmm2
+        psrldq xmm2,4
+        PMOVZXBd xmm5, xmm2
+        psrldq xmm2,4
+        pmovzxbd xmm6, xmm2
+
+        PADDd xmm3,xmm7           ; en cada xmmi queda la suma en dwords de r+g+b y 3a de un pixel 4 veces
+        PADDd xmm4,xmm8           
+        paddd xmm5,xmm9
+        paddd xmm6,xmm10
+
+        pxor xmm7,xmm7
+        pxor xmm8,xmm8
+        pxor xmm9,xmm9
+        pxor xmm10,xmm10
+
+        CVTDQ2PD xmm0,xmm3      ; convierto D1 a double Precision float  
+        CVTDQ2PD xmm1,xmm4      ; convierto D2 a double Precision float  
+        CVTDQ2PD xmm2,xmm5      ; convierto D3 a double Precision float  
+        cvtdq2pd xmm7,xmm6      ; convierto D4 a double Precision float  
+
+        divpd xmm0, [tres]
+        divpd xmm1, [tres]
+        divpd xmm2, [tres]
+        divpd xmm7, [tres]
         
-        PMOVZXBW xmm5, xmm2
+        CVTTPD2DQ xmm4,xmm0
+        CVTTPD2DQ xmm5,xmm1
+        CVTTPD2DQ xmm6,xmm2
+        CVTTPD2DQ xmm7,xmm3
+
+        PACKUSDW xmm4,xmm5      ;primeros 2 pixeles en xmm4
+        packusdw xmm6,xmm7      ;segundos 2 pixeles en xmm6
+
+        packuswb xmm4,xmm6
+
+        pextrw r10, xmm4, 0
+        pextrw r11, xmm4, 2
         
-        PADDw xmm3,xmm4           ; en cada lugar queda la suma en words de r+g+b y un byte de 3a
-        PADDw xmm5,xmm3           ; los primeros 2 pixeles en xmm5
-
-        psrlq xmm0,8
-        psrlq xmm1,8
-        psrlq xmm2,8
-
-        pmovzxbw xmm3,xmm0              
-
-        PMOVZXBW xmm4, xmm1
+        pinsrd xmm9,r10d,0
+        pinsrd xmm9,r11d,1
         
-        PMOVZXBW xmm6, xmm2
+        xor r10,r10 
+        xor r11, r11
+
+        pextrw r10, xmm4, 4
+        pextrw r11, xmm4, 6
         
-        PADDw xmm3,xmm4           ; en cada lugar queda la suma en words de r+g+b y un byte de 3a
-        PADDw xmm4,xmm6           ; los segundo 2 pixeles en xmm4
 
-                                  ;llamo D_i=r+g+n ;xmm5= [ 3a_2 D2 D2 D2 |3a_1 D1 D1 D1]   con D en words
-        PEXTRw r10, xmm5,0        ; extraigo en r10<-- D1
-        PEXTRw r11, xmm5,4        ; extraigo en r11<-- D2
-
-        CVTSI2SD xmm2,r10         ; convierto D1 a float en la parte baja de xmm2  (QuadWord) 
-        CVTSI2SD xmm3,r11         ; convierto D2 a float en la parte baja de xmm3  (QuadWord) 
-        PEXTRQ r10,xmm2,0         ; muevo D1f  a r10 para el insert
-        PINSRQ xmm3,r10,1
-
-        divpd xmm3, [tres]
-        PEXTRQ r10,xmm3,1           ;extraigo la quadword alta de xmm3 porque cvtt... solo trabaja con la parte baja de xmm3
-        CVTTSD2SI rbx,xmm3          ;convierto D2 de float a integer truncado 
-        PINSRD xmm3,r10d,0
-        CVTTSD2SI r12,xmm3          ;convierto D1 de float a integer truncado 
-        PINSRD xmm9,r12d,0          ;lo insertamos en la parte baja de la segunda QW de xmm10
-        PINSRD xmm9,ebx,1           ;lo insertamos en la parte baja de la segunda QW de xmm10
-
-
-
-;---------- segundos dos pixeles
-        PEXTRB r10, xmm1,8          ; extraigo en r10<-- D1
-        PEXTRB r11, xmm1,12         ; extraigo en r11<-- D2
-
-        CVTSI2SD xmm2,r10           ; convierto D1 a float en la parte baja de xmm2  (QuadWord) 
-        CVTSI2SD xmm3,r11           ; convierto D2 a float en la parte baja de xmm3  (QuadWord) 
-        PEXTRQ r10,xmm2,0           ; muevo D1f  a r10 para el insert
-        PINSRQ xmm3,r10,1
-
-        divpd xmm3, [tres]          ;hago la division de floats
-        PEXTRQ r10,xmm3,1           ;extraigo la quadword alta de xmm3 porque cvtt... solo trabaja con la parte baja de xmm3
-        CVTTSD2SI rbx,xmm3          ;convierto D2 de float a integer truncado 
-        PINSRD xmm3,r10d,0
-        CVTTSD2SI r12,xmm3          ;convierto D1 de float a integer truncado 
-        PINSRD xmm10,r12d,2          ;lo insertamos en la parte baja de la segunda QW de xmm10
-        PINSRD xmm10,ebx,3          ;lo insertamos en la parte alta de la segunda QW d          
-        PADDD xmm9,xmm10            ;juntamos los resultados en xmm9
-
+        pinsrd xmm9,r10d,2
+        pinsrd xmm9,r11d,3
+        
 ;------ Casos de comparacion
         pxor xmm2,xmm2               ;acá voy a ir armando la respuesta final
 ;------ calculamos los resultados del 1er caso
