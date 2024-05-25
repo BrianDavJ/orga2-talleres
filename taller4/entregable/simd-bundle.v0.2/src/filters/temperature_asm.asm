@@ -9,18 +9,22 @@ caso3: times 4 dd 160
 caso4: times 4 dd 224
 res1: db 0x80,0x00,0x00, 0x00,0x80,0x00,0x00, 0x00,0x80,0x00,0x00, 0x00,0x80,0x00,0x00, 0x00
 res2: db 0xFF, 0x00,0x00,0x00,0xFF, 0x00,0x00,0x00,0xFF, 0x00,0x00,0x00,0xFF, 0x00,0x00,0x00
-res3: db 0x00, 0xFF,0xFF,0x00,0x00, 0xFF,0xFF,0x00,0x00, 0xFF,0xFF,0x00,0x00, 0xFF,0xFF,0x00
-res4: db 0xFF, 0xFF,0x00,0x00, 0xFF,0xFF,0x00,0x00, 0xFF,0xFF,0x00,0x00, 0xFF,0xFF,0x0,0x00
-res5: db 0xFF, 0x00,0x00,0x00,0xFF, 0x00,0x00,0x00,0xFF, 0x00,0x00,0x00,0xFF, 0x00,0x00,0x00
+res3: db 0xFF,0xFF,0x00,0x00, 0xFF,0xFF,0x00,0x00, 0xFF,0xFF,0x00,0x00, 0xFF,0xFF,0x00,0x00
+res4: db 0x00,0xFF, 0xFF,0x00,0x00, 0xFF,0xFF,0x00,0x00, 0xFF,0xFF,0x00,0x00, 0xFF,0xFF,0x0
+res5: db 0x00,0x00, 0xFF, 0x00,0x00,0x00,0xFF, 0x00,0x00,0x00,0xFF, 0x00,0x00,0x00,0xFF, 0x00
 resto_32: db 0x00,0x20,0x00,0x00,0x00,0x20,0x00,0x00,0x00,0x20,0x00,0x00,0x00,0x20,0x00,0x00
 
-resto_96: db 0x00,0x00,96,0x00, 0x00,0x00,96,0x00, 0x00,0x00,96,0x00, 0x00,0x00,96,0x00
-resto_160: db 0x00,0x00,160,0x00, 0x00,0x00,160,0x00, 0x00,0x00,160,0x00, 0x00,0x00,160,0x00
-resto_224: db 0x00,0x00,224,0x00, 0x00,0x00,224,0x00, 0x00,0x00,224,0x00, 0x00,0x00,224,0x00
+resto_96: db 96,0x00, 0x00,0x00,96,0x00, 0x00,0x00,96,0x00, 0x00,0x00,96,0x00,0x00,0x00
+resto_160: db 0x00,160,0x00, 0x00,0x00,160,0x00, 0x00,0x00,160,0x00, 0x00,0x00,160,0x00,0x00
+resto_224: db 224,0x00, 0x00,0x00,224,0x00, 0x00,0x00,224,0x00, 0x00,0x00,224,0x00,0x00,0x00
 and1: dd 0x00,0x00,0xFF,0x00        ; [0,0,algo,transp]
 transparecia_final: db 0x00,0x00,0x00,0xFF,0x00,0x00,0x00,0xFF,0x00,0x00,0x00,0xFF,0x00,0x00,0x00,0xFF
 global temperature_asm
-
+menor_32: dd 0,1,2,3
+menor_96: dd 33,34,35,36
+menor_160: dd 96,97,98,99
+menor_224: dd 160,161,162,163
+mayor_224: dd 224,225,226,227
 section .data
 
 section .text
@@ -82,15 +86,15 @@ temperature_asm:
         pmovzxbd xmm6, xmm0
         ;hasta acá los pixeles de xmm0 lo mismo para xmm1 
         pmovzxbd xmm7,xmm1      ;muevo los primeros 4 bytes de xmm0 a xmm3 extendiendo de Byte a dWord
-        psrldq xmm0,4           ;en xmm7 tengo el primer pixel permutado voy al que sigue
+        psrldq xmm1,4           ;en xmm7 tengo el primer pixel permutado voy al que sigue
         PMOVZXBd xmm8, xmm1
-        psrldq xmm0,4
+        psrldq xmm1,4
         PMOVZXBd xmm9, xmm1
-        psrldq xmm0,4
+        psrldq xmm1,4
         pmovzxbd xmm10, xmm1
         ;hago la primer suma entre permutaciones
         PADDd xmm7, xmm3           ; en cada lugar queda la suma en dwords de r+g+b y 3a
-        PADDd xmm8, xmm4           ; de los primeros 2 pixeles en xmm5
+        PADDd xmm8, xmm4           ; de los primeros 2 pixeles en xmm7
         paddd xmm9, xmm5
         paddd xmm10, xmm6
 
@@ -125,36 +129,38 @@ temperature_asm:
         CVTTPD2DQ xmm4,xmm0
         CVTTPD2DQ xmm5,xmm1
         CVTTPD2DQ xmm6,xmm2
-        CVTTPD2DQ xmm7,xmm3
+        CVTTPD2DQ xmm3,xmm7
 
         PACKUSDW xmm4,xmm5      ;primeros 2 pixeles en xmm4
-        packusdw xmm6,xmm7      ;segundos 2 pixeles en xmm6
+        packusdw xmm6,xmm3      ;segundos 2 pixeles en xmm6
 
         packuswb xmm4,xmm6
 
-        pextrw r10, xmm4, 0
-        pextrw r11, xmm4, 2
+        pextrb r10, xmm4, 0
+        pextrb r11, xmm4, 4
         
-        pinsrd xmm9,r10d,0
-        pinsrd xmm9,r11d,1
+        pinsrb xmm9,r10b,0
+        pinsrb xmm9,r11b,4
         
         xor r10,r10 
         xor r11, r11
 
-        pextrw r10, xmm4, 4
-        pextrw r11, xmm4, 6
+        pextrb r10, xmm4, 8
+        pextrb r11, xmm4, 12
         
 
-        pinsrd xmm9,r10d,2
-        pinsrd xmm9,r11d,3
-        
+        pinsrb xmm9,r10b,8
+        pinsrb xmm9,r11b,12        
 ;------ Casos de comparacion
         pxor xmm2,xmm2               ;acá voy a ir armando la respuesta final
+        movdqu xmm9,[menor_224]
 ;------ calculamos los resultados del 1er caso
         movdqu xmm1, xmm9           ;placeholder para cuentas
         movdqu xmm11, [caso1]       ;armamos la masc de los que cumplen
         
-        PCMPGTB xmm11,xmm1         ;usamos la mascara
+        PCMPGTw xmm11,xmm1         ;usamos la mascara
+        pand xmm1,xmm11           ;los que son más chicos que 32
+        pshufb xmm11, [shuffle_casos]   ;ponemos 1s en todo el pixel que cumpla así hacemos las cuentas y nos olvidamos
         pand xmm1,xmm11            ;los que son más chicos que 32
 
         PSLLD xmm1,2                ;multiplicamos por 4 haciendo shift left
@@ -163,17 +169,10 @@ temperature_asm:
 
         PADDD xmm1,xmm3             ;operamos 
         
-        movdqu xmm3,[todos_128]      ;sumamos 128 porque los nuestros son sin signo      
-        PADDB xmm3,xmm1             ;ahora si tenemos el resultado en xmm3
-        
-        movdqu xmm12,[and1]          
-        pand   xmm3,xmm12            ;Ponemos ceros en los lugares 1 y 2 de los bytes   queremos [0,0,128+4t]
-        
-        pand   xmm3,xmm11
-        por xmm2,xmm3               ;agrego a los que ya cumplieron 
+        por xmm2,xmm1               ;agrego a los que ya cumplieron 
 
         movdqu xmm11,[caso1]        ;máscara para los que pasan al siguiente caso 
-        pcmpgtb xmm11,xmm9          ;comparo 
+        PCMPGTw xmm11,xmm9          ;comparo 
         pandn xmm11,xmm9            ;saco los que ya cumplen. Hace primero el not al primer operando y desp el and
         movdqu xmm9,xmm11           
         
@@ -183,7 +182,7 @@ temperature_asm:
         movdqu xmm1, xmm9           
         movdqu xmm11, [caso2]       ;armamos la masc de los que cumplen     [96,96,96,96]=xmm1
         
-        PCMPGTb xmm11,xmm1          ;usamos la mascara [0,0,0,T][0,0,0,T][0,0,0,T][0,0,0,T] 
+        PCMPGTw xmm11,xmm1          ;usamos la mascara [0,0,0,T][0,0,0,T][0,0,0,T][0,0,0,T] 
                                         ;              [0,0,0,96][0,0,0,96][0,0,0,96][0,0,0,96]
         
         pshufb xmm11, [shuffle_casos]   ;ponemos 1s en todo el pixel que cumpla así hacemos las cuentas y nos olvidamos
@@ -200,82 +199,73 @@ temperature_asm:
         
         psubd xmm1,xmm5             ;hacemos t-32
         PSLLD xmm1,2                ;4(t-32)
-        paddd xmm1,xmm4             ;ahora si pongo la cte 255: [0,0,4(t-32),255] el resultado queda en xmm4
+        paddd xmm4,xmm1             ;ahora si pongo la cte 255: [0,0,4(t-32),255] el resultado queda en xmm4
                                         ;[0,0,4(t-32),255][0,0,0,0][0,0,0,0][0,0,0,0]
-        movdqu xmm4,[todos_128]      ;sumamos 128 porque los nuestros son sin signo      
-        PADDUSB xmm4,xmm1             ;ahora si tenemos el resultado en xmm4
-
       
         pand xmm4,xmm11
         por xmm2,xmm4               ;agrego a los que ya cumplieron 
 
         movdqu xmm11,[caso2]        ;máscara para los que pasan al siguiente caso 
-        pcmpgtb xmm11,xmm9          ;comparo 
+        PCMPGTw xmm11,xmm9          ;comparo 
+        pshufb xmm11, [shuffle_casos]
 
         pandn xmm11,xmm9            ;saco los que ya cumplen. Hace primero el not al primer operando y desp el and
-        movdqu xmm9,xmm11 
+        movdqu xmm9,xmm11
         
        
 ;------ calculamos los resultados del 3er caso
         movdqu xmm1, xmm9
         movdqu xmm11,[caso3]
-        
 
-        PCMPGTQ xmm11,xmm1          ;usamos la mascara
+        PCMPGTw xmm11,xmm1          ;usamos la mascara
         pshufb xmm11, [shuffle_casos]   ;ponemos 1s en todo el pixel que cumpla así hacemos las cuentas y nos olvidamos
         pand xmm1,xmm11            ;los que son más chicos que 160
-        
 
-        ;asumo que en xmm1 tengo la temperatura calculada con el filtro
-        ;128                                0
         ;[0,0,T,A,|0,0,T,A,|0,0,T,A,|0,0,T,A]
         ;[0,0,96,0,|0,0,96,0,|0,0,96,0,|0,0,96,0]
         movdqu xmm5,[resto_96]
-        psubd xmm1,xmm5     ; T-96
+        psubb xmm1,xmm5     ; T-96
         pslld xmm1,2        ;4(t-96)
 
         movdqu xmm5,[res3]
-        psubd xmm5,xmm1         ;[0, 255 , 255-4(t-96) , 0|0, 255 , 255-4(t-96), 0|0, 255 ,  255-4(t-96) , 0]
+        psubb xmm5,xmm1         ;[0, 255 , 255-4(t-96) , 0|0, 255 , 255-4(t-96), 0|0, 255 ,  255-4(t-96) , 0]
                                 ;[T,A,0,0,|T,A,0,0,|T,A,0,0,|T,A,0,0]
-        psrld xmm1,8            ;shift 1 byte para borrar la transparencia A de cada pixel
-        pslld xmm1,8            ;[0,0,T,0,|0,0,T,0,|0,0,T,0,|0,0,T,0]
+        
         pslld xmm1,16           ;[T,0,0,0,|T,0,0,0,|T,0,0,0,|T,0,0,0] lo dejo separado para que sea más legible
         
         paddd xmm1,xmm5         ;[4(t-96) , 255, 255-4(t-96) , 0 | 4(t-96) ,255 , 255-4(t-96) ,0 | 4(t-96) ,255 , 255-4(t-96) , 0 ]
         movdqu xmm5,xmm1        ;el resultado queda en xmm5
 
-        movdqu xmm5,[todos_128]      ;sumamos 128 porque los nuestros son sin signo      
-        PADDUSB xmm5,xmm1             ;ahora si tenemos el resultado en xmm5
 
         pand xmm5,xmm11
         por xmm2,xmm5               ;agrego a los que ya cumplieron 
         movdqu xmm11,[caso3]        ;máscara para los que pasan al siguiente caso 
-        pcmpgtq xmm11,xmm9          ;comparo 
-        pand xmm11,xmm9            ;saco los que ya cumplen. Hace primero el not al primer operando y desp el and
-        movdqu xmm9,xmm11 
+        PCMPGTw xmm11,xmm9          ;comparo 
+        pandn xmm11,xmm9            ;saco los que ya cumplen. Hace primero el not al primer operando y desp el and
+        movdqu xmm9,xmm11
 ;------ calculamos los resultados del 4to caso
         movdqu xmm1,xmm9
         movdqu xmm11,[caso4]
-        PCMPGTQ xmm11,xmm1          ;usamos la mascara
-        pshufb xmm11, [shuffle_casos]   ;ponemos 1s en todo el pixel que cumpla así hacemos las cuentas y nos olvidamos
-        pand xmm1,xmm11            ;los que son más chicos que 160
-        pand xmm1,xmm11            ;los que son más chicos que 224
-        
-        movdqu xmm6,[res4]
 
-        psubd xmm1,[resto_160]  ;resto la cte
+        PCMPGTw xmm11,xmm1          ;usamos la mascara
+        pshufb xmm11, [shuffle_casos]   ;ponemos 1s en todo el pixel que cumpla así hacemos las cuentas y nos olvidamos
+        pand xmm1,xmm11            ;los que son más chicos que 224
+
+        movdqu xmm6,[res4]
+        pslld xmm1,8
+        movdqu xmm7, [resto_160]
+        psubd xmm1,xmm7  ;resto la cte
+
         pslld xmm1, 2           ;multiplico por 4
         pslld xmm1,8
         psubd xmm6,xmm1         ;el resultado que quiero me queda en xmm6
         
-        movdqu xmm6,[todos_128]      ;sumamos 128 porque los nuestros son sin signo      
-        PADDUSB xmm6,xmm1             ;ahora si tenemos el resultado en xmm6
         pand xmm6,xmm11
         por xmm2,xmm6               ;agrego a los que ya cumplieron 
         movdqu xmm11,[caso4]        ;máscara para los que pasan al siguiente caso (mayor a 224)
-        pcmpgtq xmm11,xmm1          ;comparo 
-        pand xmm9,xmm11             ;saco los que ya cumplen.
-        
+        PCMPGTw xmm11,xmm9          ;comparo 
+        pandn xmm11,xmm9             ;saco los que ya cumplen.
+        movdqu xmm9,xmm11
 
 ;------ calculamos los resultados del 5to caso
         movdqu xmm1,xmm9        ;en xmm9 solo los que cumplen
@@ -286,9 +276,10 @@ temperature_asm:
         pslld xmm1,2
         pslld xmm1, 16
         psubd xmm8,xmm1 
-        movdqu xmm8,[todos_128] ;en xmm8 los resultados
-        PADDUSB xmm8,xmm1             ;ahora si tenemos el resultado en xmm8
-        pandn xmm11,xmm8         ;en xmm8 solo los que eran más grandes que 224
+        movdqu xmm11,[caso4]
+        PCMPGTw xmm11,xmm9
+        pslld xmm11, 16
+        pandn xmm11,xmm8         ;en xmm8 solo los que eran más grandes que 224 (pasaron el caso 4)
         movdqu xmm8,xmm11
 
         por xmm2,xmm8               ;agrego a los que ya cumplieron 
