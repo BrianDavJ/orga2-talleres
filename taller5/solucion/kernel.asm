@@ -28,6 +28,8 @@ start_rm_len equ    $ - start_rm_msg
 start_pm_msg db     'Iniciando kernel en Modo Protegido'
 start_pm_len equ    $ - start_pm_msg
 
+fila_rm equ 40
+col_rm equ 25
 ;;
 ;; Seccion de código.
 ;; -------------------------------------------------------------------------- ;;
@@ -36,7 +38,7 @@ start_pm_len equ    $ - start_pm_msg
 BITS 16
 start:
     ; COMPLETAR - Deshabilitar interrupciones
-
+    cli
 
     ; Cambiar modo de video a 80 X 50
     mov ax, 0003h
@@ -48,13 +50,31 @@ start:
     ; COMPLETAR - Imprimir mensaje de bienvenida - MODO REAL
     ; (revisar las funciones definidas en print.mac y los mensajes se encuentran en la
     ; sección de datos)
+    ;;  Parametros:
+;;      %1: Puntero al mensaje
+;;      %2: Longitud del mensaje
+;;      %3: Color
+;;      %4: Fila
+;;      %5: Columna
+    call print_text_rm start_rm_msg, start_rm_len, 0b11110000, fila_rm, col_rm
+
+;;      * Bit #: 7 6 5 4 3 2 1 0
+;;               | | | | | | | |
+;;               | | | | | ^-^-^-- Fore color
+;;               | | | | ^-------- Fore color bright bit
+;;               | ^-^-^---------- Back color
+;;               ^---------------- Back color bright bit OR enables blinking text
 
     ; COMPLETAR - Habilitar A20
     ; (revisar las funciones definidas en a20.asm)
+    call A20_enable
+
+
 
     ; COMPLETAR - Cargar la GDT
-
+    lgdt[GDT_DESC]
     ; COMPLETAR - Setear el bit PE del registro CR0
+    
 
     ; COMPLETAR - Saltar a modo protegido (far jump)
     ; (recuerden que un far jmp se especifica como jmp CS_selector:address)
