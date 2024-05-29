@@ -6,13 +6,14 @@
 %include "print.mac"
 
 global start
-
-
+extern GDT_DESC
+extern gdt
+extern screen_draw_box
 ; COMPLETAR - Agreguen declaraciones extern según vayan necesitando
 
 ; COMPLETAR - Definan correctamente estas constantes cuando las necesiten
-;%define CS_RING_0_SEL ??   
-;%define DS_RING_0_SEL ??   
+%define CS_RING_0_SEL 1  
+%define DS_RING_0_SEL 3   
 
 
 BITS 16
@@ -28,8 +29,8 @@ start_rm_len equ    $ - start_rm_msg
 start_pm_msg db     'Iniciando kernel en Modo Protegido'
 start_pm_len equ    $ - start_pm_msg
 
-fila_rm equ 40
-col_rm equ 25
+fila_rm equ 2
+col_rm equ 0
 ;;
 ;; Seccion de código.
 ;; -------------------------------------------------------------------------- ;;
@@ -56,7 +57,7 @@ start:
 ;;      %3: Color
 ;;      %4: Fila
 ;;      %5: Columna
-    call print_text_rm start_rm_msg, start_rm_len, 0b11110000, fila_rm, col_rm
+    call print_text_rm start_rm_msg, start_rm_len, 0b010011010, fila_rm, col_rm
 
 ;;      * Bit #: 7 6 5 4 3 2 1 0
 ;;               | | | | | | | |
@@ -74,7 +75,10 @@ start:
     ; COMPLETAR - Cargar la GDT
     lgdt[GDT_DESC]
     ; COMPLETAR - Setear el bit PE del registro CR0
-    
+    mov rdi, cr0
+    inc rdi
+    mov cr0,rdi
+    jmp CS_RING_0_SEL:modo_protegido ;no sabemos si va ":" o "+"
 
     ; COMPLETAR - Saltar a modo protegido (far jump)
     ; (recuerden que un far jmp se especifica como jmp CS_selector:address)
@@ -85,13 +89,21 @@ modo_protegido:
     ; COMPLETAR - A partir de aca, todo el codigo se va a ejectutar en modo protegido
     ; Establecer selectores de segmentos DS, ES, GS, FS y SS en el segmento de datos de nivel 0
     ; Pueden usar la constante DS_RING_0_SEL definida en este archivo
+    mov ds,gdt[DS_RING_0_SEL]
+    mov es,gdt[DS_RING_0_SEL]
+    mov gs,gdt[DS_RING_0_SEL]
+    mov fs,gdt[DS_RING_0_SEL]
+    mov ss,gdt[DS_RING_0_SEL]
 
-    ; COMPLETAR - Establecer el tope y la base de la pila
-
-    ; COMPLETAR - Imprimir mensaje de bienvenida - MODO PROTEGIDO
-
-    ; COMPLETAR - Inicializar pantalla
     
+    ; COMPLETAR - Establecer el tope y la base de la pila
+    mov esp, 0x25000
+    mov ebp, esp
+    
+    ; COMPLETAR - Imprimir mensaje de bienvenida - MODO PROTEGIDO
+    call print_text_pm start_pm_msg, start_pm_len,0b010011010,fila_rm,col_rm
+    ; COMPLETAR - Inicializar pantalla
+ 
    
     ; Ciclar infinitamente 
     mov eax, 0xFFFF
