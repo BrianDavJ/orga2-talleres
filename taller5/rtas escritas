@@ -34,5 +34,11 @@ S==System: Si es 1 permite administrar en las tablas de descriptores dos clases 
 
 PREGUNTA 4	
 1010
-
+PREGUNTA 10
+En el código, ¿qué estructura indica donde está almacenada la dirección desde la cual se carga la GDT y su tamaño? ¿dónde se inicializa en el código?
+En el gdt_descriptor, en el kernel despues de habilitar el A20
+PREGUNTA 13
+Investiguen en el manual de Intel sección 2.5 Control Registers, el registro CR0. ¿Deberíamos modificarlo para pasar a modo protegido?
+Si con un mov entre registros
+PREGUNTA 15
 
