@@ -70,4 +70,31 @@ void screen_draw_box(uint32_t fInit, uint32_t cInit, uint32_t fSize,
 }
 
 void screen_draw_layout(void) {
+
+  ca(*p)[VIDEO_COLS] = (ca(*)[VIDEO_COLS])VIDEO;
+  uint32_t f;
+  uint32_t c;
+  for (f = 0; f < VIDEO_FILS; f++) {
+    for (c = 0; c < VIDEO_COLS; c++) {
+      p[f][c].c =0;
+      p[f][c].a =0;
+    }
+  }
+  const char* text = "Hello, World!";
+  uint32_t x = 25;
+  uint32_t y = 40;
+  uint16_t attr=0x0F;
+
+  for (uint32_t i = 0; text[i] != 0; i++) {
+    p[y][x].c = (uint8_t)text[i];
+    p[y][x].a = (uint8_t)attr;
+    x++;
+    if (x == VIDEO_COLS) {
+      x = 0;
+      y++;
+    }
+  }
+ 
+  
+ 
 }

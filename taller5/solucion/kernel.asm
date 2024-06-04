@@ -10,10 +10,10 @@ extern GDT_DESC
 extern gdt
 extern screen_draw_box
 ; COMPLETAR - Agreguen declaraciones extern según vayan necesitando
-
+extern screen_draw_layout
 ; COMPLETAR - Definan correctamente estas constantes cuando las necesiten
-%define CS_RING_0_SEL 1  
-%define DS_RING_0_SEL 3   
+%define CS_RING_0_SEL 1 << 3  
+%define DS_RING_0_SEL 3 << 3  
 
 
 BITS 16
@@ -75,10 +75,11 @@ start:
     ; COMPLETAR - Cargar la GDT
     lgdt[GDT_DESC]
     ; COMPLETAR - Setear el bit PE del registro CR0
-    mov rdi, cr0
-    inc rdi
-    mov cr0,rdi
-    jmp CS_RING_0_SEL:modo_protegido ;no sabemos si va ":" o "+"
+    mov eax, cr0
+    or eax,1
+    mov cr0,eax
+    
+    jmp CS_RING_0_SEL:modo_protegido
 
     ; COMPLETAR - Saltar a modo protegido (far jump)
     ; (recuerden que un far jmp se especifica como jmp CS_selector:address)
@@ -89,11 +90,12 @@ modo_protegido:
     ; COMPLETAR - A partir de aca, todo el codigo se va a ejectutar en modo protegido
     ; Establecer selectores de segmentos DS, ES, GS, FS y SS en el segmento de datos de nivel 0
     ; Pueden usar la constante DS_RING_0_SEL definida en este archivo
-    mov ds,gdt[DS_RING_0_SEL]
-    mov es,gdt[DS_RING_0_SEL]
-    mov gs,gdt[DS_RING_0_SEL]
-    mov fs,gdt[DS_RING_0_SEL]
-    mov ss,gdt[DS_RING_0_SEL]
+    mov ax,0x18;DS_RING_0_SEL
+    mov ds,ax
+    mov es,ax
+    mov gs,ax
+    mov fs,ax
+    mov ss,ax
 
     
     ; COMPLETAR - Establecer el tope y la base de la pila
@@ -101,9 +103,11 @@ modo_protegido:
     mov ebp, esp
     
     ; COMPLETAR - Imprimir mensaje de bienvenida - MODO PROTEGIDO
-    call print_text_pm start_pm_msg, start_pm_len,0b010011010,fila_rm,col_rm
+    print_text_pm start_pm_msg, start_pm_len, 0b010011010, fila_rm, col_rm
     ; COMPLETAR - Inicializar pantalla
- 
+    call screen_draw_box
+    call screen_draw_layout
+
    
     ; Ciclar infinitamente 
     mov eax, 0xFFFF

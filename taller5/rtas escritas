@@ -40,5 +40,6 @@ En el gdt_descriptor, en el kernel despues de habilitar el A20
 PREGUNTA 13
 Investiguen en el manual de Intel sección 2.5 Control Registers, el registro CR0. ¿Deberíamos modificarlo para pasar a modo protegido?
 Si con un mov entre registros
-PREGUNTA 15
+PREGUNTA 21
+pinta un cuadrado (lleno) con el caracter 'character' y atributo 'attr' de tamaño fSize x cSize. Usa la estructura 'ca' que contiene 8 bits representando al caracter y 8 bits al atributo. Accede a la pantalla con un puntero 'p' y se mueve en forma matricial es decir [fila][columna]
 
