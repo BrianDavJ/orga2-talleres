@@ -23,7 +23,7 @@
 /* -------------------------------------------------------------------------- */
 #define GDT_COUNT 35
 
-#define GDT_IDX_NULL_DESC 00010
+#define GDT_IDX_NULL_DESC 0
 #define GDT_IDX_CODE_0 1
 #define GDT_IDX_CODE_3 2
 #define GDT_IDX_DATA_0 3
@@ -63,8 +63,8 @@
 /* COMPLETAR - Valores de atributos */ 
 #define DESC_CODE_DATA 1
 #define DESC_SYSTEM    0
-#define DESC_TYPE_EXECUTE_READ 1010
-#define DESC_TYPE_READ_WRITE   0010
+#define DESC_TYPE_EXECUTE_READ 10
+#define DESC_TYPE_READ_WRITE   2
 
 /* COMPLETAR - Tamaños de segmentos */ 
 #define FLAT_SEGM_SIZE   817*1024*1024

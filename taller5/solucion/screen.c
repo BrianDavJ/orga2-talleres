@@ -76,25 +76,24 @@ void screen_draw_layout(void) {
   uint32_t c;
   for (f = 0; f < VIDEO_FILS; f++) {
     for (c = 0; c < VIDEO_COLS; c++) {
-      p[f][c].c =0;
-      p[f][c].a =0;
+      p[f][c].c = 0;
+      p[f][c].a = 0;
     }
   }
-  const char* text = "Hello, World!";
-  uint32_t x = 25;
-  uint32_t y = 40;
-  uint16_t attr=0x0F;
-
-  for (uint32_t i = 0; text[i] != 0; i++) {
-    p[y][x].c = (uint8_t)text[i];
-    p[y][x].a = (uint8_t)attr;
-    x++;
-    if (x == VIDEO_COLS) {
-      x = 0;
+  const char* text = "hola mateo";
+  uint16_t attr=0x1A; 
+  uint32_t x=25;
+  uint32_t y=40;
+  int i=0;
+  while(text[i]!=0){
+    p[y][x].c=text[i];
+    p[y][x].a=attr;
+    i++;
+    if (x==VIDEO_COLS){
       y++;
+      x=0;
     }
+    x++;
   }
- 
   
- 
 }

@@ -57,7 +57,7 @@ start:
 ;;      %3: Color
 ;;      %4: Fila
 ;;      %5: Columna
-    call print_text_rm start_rm_msg, start_rm_len, 0b010011010, fila_rm, col_rm
+     print_text_rm start_rm_msg, start_rm_len, 0b010011010, fila_rm, col_rm
 
 ;;      * Bit #: 7 6 5 4 3 2 1 0
 ;;               | | | | | | | |
@@ -76,8 +76,8 @@ start:
     lgdt[GDT_DESC]
     ; COMPLETAR - Setear el bit PE del registro CR0
     mov eax, cr0
-    or eax,1
-    mov cr0,eax
+    or eax, 1
+    mov cr0, eax
     
     jmp CS_RING_0_SEL:modo_protegido
 
@@ -106,6 +106,7 @@ modo_protegido:
     print_text_pm start_pm_msg, start_pm_len, 0b010011010, fila_rm, col_rm
     ; COMPLETAR - Inicializar pantalla
     call screen_draw_box
+    
     call screen_draw_layout
 
    

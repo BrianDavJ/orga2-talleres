@@ -40,7 +40,7 @@ typedef struct str_gdt_entry {
 } __attribute__((__packed__, aligned(8))) gdt_entry_t;
 
 /* Declaracion variables de la Tabla GDT */
-extern gdt_entry_t gdt[]; // un descriptor de segmento en la tabla GDT
-extern gdt_descriptor_t GDT_DESC; //la Base Adress y el limite de la tabla en sí
+extern gdt_entry_t gdt[];
+extern gdt_descriptor_t GDT_DESC;
 
 #endif // __GDT_H__
