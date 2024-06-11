@@ -1,0 +1,75 @@
+a) ¿Cuántos niveles de privilegio podemos definir en las estructuras de paginación?
+
+Podemos definir 2 niveles en las estructuras de paginación, nivel 3 (user) o nivel 0 (kernel) 
+
+
+b) ¿Cómo se traduce una dirección lógica en una dirección fı́sica? ¿Cómo participan la dirección lógica, el registro de control CR3, el directorio y la tabla de páginas? Recomendación: describan el proceso en pseudocódigo
+
+``` 
+
+reciboDireccionLineal //( Linear Address)
+
+pd:= CR3 & 0FFFFF000
+pd_index:= (virt>>22) & 0x3FF
+pt:= pd[pd_index] & 0FFFFF000
+pt_index:= (virt>>12) & 0x3FF
+page_addr:= pt[pt_index] & 0FFFFF000
+offset:= virt & 0x3FF
+
+dir_phy:= page_addre | offset
+
+```
+
+Explicación del codigo
+
+    - con los bits 31 a 22 del Address y el CR3 armo la dirección del Directorio de Página:
+
+El CR3 me dice dónde está el directorio actual en sus bits 31 a 12 y si tenemos que deshabilitar cache de las entradas del directorio de página con el bit 4 o si tenemos que deshabilitar el write-back cuando el procesador modifica el page directory (qué era el write-back?)
+
+Los bits del Address me dicen cual entrada usar a continuación
+
+
+    - con los bits 21 a 12 y la entrada del Directorio de Página busco en la Tabla de Página 
+
+
+La entrada del directorio me dice dónde está la tabla asociada en sus bits 31 a 12 y si se accedió a memoria controlada por esta entrada de página con el bit 5,  si tenemos que deshabilitar cache de las entradas del directorio de página con el bit 4 o si tenemos que deshabilitar el write-back cuando el procesador modifica el page table (qué era el write-back?) y otros flags
+
+Los bits del Address me dicen cual entrada usar a continuación
+
+
+
+
+    - con los bits 11 a 0 y la págoma de la Tabla de Página accedo a la dirección física.
+
+La entrada de la página me dice dónde está la traducción asociada en sus bits 31 a 12 y si se accedió a memoria controlada por esta entrada de página con el bit 5,  si tenemos que deshabilitar cache de las entradas del directorio de página con el bit 4 o si tenemos que deshabilitar el write-back cuando el procesador modifica la dir (qué era el write-back?) y otros flags
+
+Los bits del Address me dicen cual entrada usar a continuación
+
+
+
+c) ¿Cuál es el efecto de los siguientes atributos en las entradas de la tabla de página?
+D: Dirty
+A:Accessed 
+PCD: Page Caché Disable
+PWT: Page Write-Through
+U/S: User-Supervisor
+R/W: Read-Write
+P:   Present
+
+d) ¿Qué sucede si los atributos U/S y R/W del directorio y de la tabla de páginas difieren? ¿Cuáles terminan siendo los atributos de una página determinada en ese caso? Hint: buscar la tabla Combined Page-Directory and Page-Table Protection del manual 3 de Intel
+
+Si el atributo U/S está en modo Supervisor se ignora el atributo R/W y podemos tanto leer como escribir, dependiendo del flag WP del registro CR0 (debe estar en 0, de lo contrario sólo podemos leer). En caso de estar en modo User sólo podemos escribir en páginas que sean accesibles a escritura para user-mode, además no podemos leer ninguna página que esté en supervisor-mode. Cualquier intento de violación de estas restricciones genera un page-fault.
+
+
+e) Suponiendo que el código de la tarea ocupa dos páginas y utilizaremos una página para la pila de la tarea. ¿Cuántas
+páginas hace falta pedir a la unidad de manejo de memoria para el directorio, tablas de páginas y la memoria de una tarea?
+
+1 página de directorio, 1 página de tabla donde 2 entradas apuntan a las 2 páginas de la tarea y otra entrada apunta al stack (? tengo duda)
+
+g) ¿Qué es el buffer auxiliar de traducción (translation lookaside buffer o TLB) y por qué es necesario purgarlo (tlbflush) al introducir modificaciones a nuestras estructuras de paginación (directorio, tabla de páginas)? ¿Qué atributos posee cada traducción en la TLB? Al desalojar una entrada determinada de la TLB ¿Se ve afectada la homóloga en la tabla original para algún caso?
+
+Es una caché de traducciones tabla, debemos purgarlo ya que de lo contrario podrı́amos seguir observando traducciones inválidas.
+
+
+
+

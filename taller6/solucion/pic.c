@@ -26,13 +26,13 @@ void pic_finish2(void) {
 void pic_reset() {
   // remapeo pic1
   outb(PIC1_PORT, 0x11);
-  outb(PIC1_PORT+1, 0x08);
+  outb(PIC1_PORT+1, 32);
   outb(PIC1_PORT+1, 0X04);
   outb(PIC1_PORT+1, 0X01);
   outb(PIC1_PORT+1, 0xff);
   //remapeo pic2
   outb(PIC2_PORT, 0x11);
-  outb(PIC2_PORT+1, 0x70);
+  outb(PIC2_PORT+1, 40);
   outb(PIC2_PORT+1, 0X02);
   outb(PIC2_PORT+1, 0X01);
   

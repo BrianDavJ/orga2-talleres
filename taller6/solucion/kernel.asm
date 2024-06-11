@@ -121,15 +121,17 @@ modo_protegido:
     call pic_enable
 
     sti
-
-    int32
+    int 88
+    int 98
 
     ; Ciclar infinitamente 
     mov eax, 0xFFFF
     mov ebx, 0xFFFF
     mov ecx, 0xFFFF
     mov edx, 0xFFFF
-    jmp $
+    ;.aca:
+    
+    jmp $ ;.aca
 
 ;; -------------------------------------------------------------------------- ;;
 

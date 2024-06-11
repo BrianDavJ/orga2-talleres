@@ -122,7 +122,14 @@ ISRNE 20
 global _isr32
 ; COMPLETAR: Implementar la rutina
 _isr32:
+    cli
+    pushad
+    
     call next_clock
+    
+    call pic_finish1
+    popad
+    sti
     iret
 
 ;; Rutina de atención del TECLADO
@@ -130,12 +137,17 @@ _isr32:
 global _isr33
 ; COMPLETAR: Implementar la rutina
 _isr33:
-    in eax, 0x60
-    mov edi, eax
-    
+    cli
+    pushad
+
+    xor eax,eax
+    in al, 0x60
+    push eax
     call process_scancode
-
-
+    pop eax
+    call pic_finish1
+    popad
+    sti
     iret
 
 
@@ -145,14 +157,21 @@ _isr33:
 global _isr88
 ; COMPLETAR: Implementar la rutina
 _isr88:
-    in eax,0x58
+    pushad
 
+    mov eax,0x58
+
+    popad
     iret
 
 global _isr98
 ; COMPLETAR: Implementar la rutina
 _isr98:
-    in eax, 0x62
+  pushad
+
+    mov eax, 0x62
+  
+  popad
     iret
 
 ; PushAD Order
