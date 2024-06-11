@@ -91,8 +91,8 @@ VIRT_PAGE_DIR(X)    devuelve el page directory entry, donde X es una dirección 
 CR3_TO_PAGE_DIR(X)  devuelve el page directory, donde X es el contenido del registro CR3
 MMU_ENTRY_PADDR(X)  devuelve la dirección física de la base de un page frame o de un page table, donde X es el campo de 20 bits en una PTE o PDE
 */
-#define INDEX_PAGE_TABLE(X) (X>>12) & 0x3FF
-#define INDEX_PAGE_DIR(X) (X>>22) & 0x3FF
+#define INDEX_PAGE_TABLE(X) (X>>12) & 0x3FF  // X es la virtual address
+#define INDEX_PAGE_DIR(X) (X>>22) & 0x3FF   // X es la virtual address
 #define VIRT_PAGE_OFFSET(X) X&0x3FF
 #define VIRT_PAGE_TABLE(X)  VIRT_PAGE_DIR[INDEX_PAGE_DIR] & 0xFFFFF000
 #define VIRT_PAGE_DIR(X)    CR3_TO_PAGE_DIR & 0xFFFFF00
