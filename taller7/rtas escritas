@@ -49,8 +49,8 @@ Los bits del Address me dicen cual entrada usar a continuación
 
 c) ¿Cuál es el efecto de los siguientes atributos en las entradas de la tabla de página?
 D: Dirty
-A:Accessed 
-PCD: Page Caché Disable
+A:Accessed -> setteado por la unidad de mem cuando se escribe o leen la pag
+PCD: Page Caché Disable que la pagina no se almacene
 PWT: Page Write-Through
 U/S: User-Supervisor
 R/W: Read-Write
@@ -68,8 +68,8 @@ páginas hace falta pedir a la unidad de manejo de memoria para el directorio, t
 
 g) ¿Qué es el buffer auxiliar de traducción (translation lookaside buffer o TLB) y por qué es necesario purgarlo (tlbflush) al introducir modificaciones a nuestras estructuras de paginación (directorio, tabla de páginas)? ¿Qué atributos posee cada traducción en la TLB? Al desalojar una entrada determinada de la TLB ¿Se ve afectada la homóloga en la tabla original para algún caso?
 
-Es una caché de traducciones tabla, debemos purgarlo ya que de lo contrario podrı́amos seguir observando traducciones inválidas.
+Es una tabla caché de traducciones tabla, debemos purgarlo ya que de lo contrario podrı́amos seguir observando traducciones inválidas.
 
-
+Indice es la linear addres y si esta tengo los atributos y la dirección física final
 
 

@@ -54,6 +54,13 @@ void mmu_init(void) {}
  * @return devuelve la dirección de memoria de comienzo de la próxima página libre de kernel
  */
 paddr_t mmu_next_free_kernel_page(void) {
+//  if (next_free_kernel_page+0x1000<identity_mapping_end){
+  next_free_kernel_page+=0x1000
+  /* }else{
+    algo?
+  } */
+
+  return (next_free_kernel_page-0x1000)
 }
 
 /**
@@ -61,6 +68,9 @@ paddr_t mmu_next_free_kernel_page(void) {
  * @return devuelve la dirección de memoria de comienzo de la próxima página libre de usuarix
  */
 paddr_t mmu_next_free_user_page(void) {
+  next_free_user_page+=0x1000
+
+  return (next_free_user_page-0x1000)
 }
 
 /**
@@ -70,7 +80,17 @@ paddr_t mmu_next_free_user_page(void) {
  * de páginas usado por el kernel
  */
 paddr_t mmu_init_kernel_dir(void) {
-}
+  
+  kpd.pt=KERNEL_PAGE_DIR
+  kpd.attrs=MMU_P
+  kpt.page=KERNEL_PAGE_TABLE_0
+  kpt.attrs=MMU_P
+  for (uint32_t i = kpt.page;i<identity_mapping_end;i+8){
+    kpt[i].attrs = MMU_W | MMU_P;
+    kpt[i].page = i;
+  }
+  return kpd
+} //rta a pregunta: Hace falta solo una entrada de Directorio de página?
 
 /**
  * mmu_map_page agrega las entradas necesarias a las estructuras de paginación de modo de que
