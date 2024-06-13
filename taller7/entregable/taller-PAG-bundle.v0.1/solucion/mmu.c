@@ -68,9 +68,9 @@ paddr_t mmu_next_free_kernel_page(void) {
  * @return devuelve la dirección de memoria de comienzo de la próxima página libre de usuarix
  */
 paddr_t mmu_next_free_user_page(void) {
-  next_free_user_page+=0x1000;
+  next_free_user_page+=0x10000;
 
-  return (next_free_user_page-0x1000);
+  return (next_free_user_page-0x10000);
 }
 
 /**
@@ -80,14 +80,13 @@ paddr_t mmu_next_free_user_page(void) {
  * de páginas usado por el kernel
  */
 paddr_t mmu_init_kernel_dir(void) {
-  for (uint32_t i =0;i<0x3fffff;i+=0x20){
-    kpd[i].attrs=MMU_W | MMU_P;
-    kpd[i].pt=KERNEL_PAGE_DIR+i;
+  for (int i = 0; i < 1024; i++) {
+    kpt[i].attrs = 0x3; // Present y RW
+    kpt[i].page=i;
   }
-  for (uint32_t i =0;i<0x3fffff;i+=0x20){
-    kpt[i].attrs=MMU_W | MMU_P;
-    kpt[i].page=KERNEL_PAGE_TABLE_0+i;
-  }
+  kpd[0].attrs= 0x3;
+  kpd[0].pt=((uint32_t)kpt)<<12;
+
   return KERNEL_PAGE_DIR;
 } //rta a pregunta: Hace falta solo una entrada de Directorio de página que me deje configurar la tabla de?
 
