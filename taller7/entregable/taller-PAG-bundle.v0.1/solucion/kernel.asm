@@ -123,13 +123,14 @@ modo_protegido:
     call pic_enable
     
     call mmu_init_kernel_dir
-    mov CR3,eax
     
-    inc r8
-    or CR3,r8d
-    add r8,31
-    or CR0,r8d
-
+    or eax, 1
+    mov cr3,eax
+    xor eax,eax
+    mov eax, cr0
+    or eax,32
+    mov cr0,eax
+    
     sti
     int 88
     int 98
