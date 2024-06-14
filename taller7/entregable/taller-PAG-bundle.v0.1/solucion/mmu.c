@@ -153,11 +153,13 @@ void copy_page(paddr_t dst_addr, paddr_t src_addr)
 
   uint8_t * src =(uint8_t*)SRC_VIRT_PAGE;
   uint8_t * dst =(uint8_t*)DST_VIRT_PAGE;
-  
-  dst[0] = src[0];
-  // un for de tamañano de pagina asingando a dst lo que esta en src
-  // despues desmapeamos
-  
+
+ for (int i=0;i<PAGE_SIZE;i++) {
+  dst[i] = src[i];
+ }
+ mmu_unmap_page(cr3_actual,DST_VIRT_PAGE);
+ mmu_unmap_page(cr3_actual,SRC_VIRT_PAGE);
+ tlbflush();
 }
 
 /**
