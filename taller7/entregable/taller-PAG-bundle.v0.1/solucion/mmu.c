@@ -11,8 +11,8 @@
 
 #include "kassert.h"
 
-static pd_entry_t* kpd = (pd_entry_t*)KERNEL_PAGE_DIR;
-static pt_entry_t* kpt = (pt_entry_t*)KERNEL_PAGE_TABLE_0;
+static pd_entry_t *kpd = (pd_entry_t *)KERNEL_PAGE_DIR;
+static pt_entry_t *kpt = (pt_entry_t *)KERNEL_PAGE_TABLE_0;
 
 static const uint32_t identity_mapping_end = 0x003FFFFF;
 static const uint32_t user_memory_pool_end = 0x02FFFFFF;
@@ -27,10 +27,12 @@ static paddr_t next_free_user_page = 0x400000;
  * @param c es el valor a asignar en cada byte de s[0..n-1]
  * @param n es el tamaño en bytes a asignar
  * @return devuelve el puntero al rango modificado (alias de s)
-*/
-static inline void* kmemset(void* s, int c, size_t n) {
-  uint8_t* dst = (uint8_t*)s;
-  for (size_t i = 0; i < n; i++) {
+ */
+static inline void *kmemset(void *s, int c, size_t n)
+{
+  uint8_t *dst = (uint8_t *)s;
+  for (size_t i = 0; i < n; i++)
+  {
     dst[i] = c;
   }
   return dst;
@@ -39,38 +41,39 @@ static inline void* kmemset(void* s, int c, size_t n) {
 /**
  * zero_page limpia el contenido de una página que comienza en addr
  * @param addr es la dirección del comienzo de la página a limpiar
-*/
-static inline void zero_page(paddr_t addr) {
-  kmemset((void*)addr, 0x00, PAGE_SIZE);
+ */
+static inline void zero_page(paddr_t addr)
+{
+  kmemset((void *)addr, 0x00, PAGE_SIZE);
 }
-
 
 void mmu_init(void) {}
 
-
 /**
- * mmu_next_free_kernel_page devuelve la dirección física de la próxima página de kernel disponible. 
+ * mmu_next_free_kernel_page devuelve la dirección física de la próxima página de kernel disponible.
  * Las páginas se obtienen en forma incremental, siendo la primera: next_free_kernel_page
  * @return devuelve la dirección de memoria de comienzo de la próxima página libre de kernel
  */
-paddr_t mmu_next_free_kernel_page(void) {
-//  if (next_free_kernel_page+0x1000<identity_mapping_end){
-  next_free_kernel_page+=0x1000;
+paddr_t mmu_next_free_kernel_page(void)
+{
+  //  if (next_free_kernel_page+0x1000<identity_mapping_end){
+  next_free_kernel_page += 0x1000;
   /* }else{
     algo?
   } */
 
-  return (next_free_kernel_page-0x1000);
+  return (next_free_kernel_page - 0x1000);
 }
 
 /**
  * mmu_next_free_user_page devuelve la dirección de la próxima página de usuarix disponible
  * @return devuelve la dirección de memoria de comienzo de la próxima página libre de usuarix
  */
-paddr_t mmu_next_free_user_page(void) {
-  next_free_user_page+=0x10000;
+paddr_t mmu_next_free_user_page(void)
+{
+  next_free_user_page += 0x1000;
 
-  return (next_free_user_page-0x10000);
+  return (next_free_user_page - 0x1000);
 }
 
 /**
@@ -79,16 +82,20 @@ paddr_t mmu_next_free_user_page(void) {
  * @return devuelve la dirección de memoria de la página donde se encuentra el directorio
  * de páginas usado por el kernel
  */
-paddr_t mmu_init_kernel_dir(void) {
-  for (int i = 0; i < 1024; i++) {
+paddr_t mmu_init_kernel_dir(void)
+{
+  zero_page(KERNEL_PAGE_DIR);
+  zero_page(KERNEL_PAGE_TABLE_0);
+  kpd[0].attrs = 0x3;
+  kpd[0].pt = ((uint32_t)KERNEL_PAGE_TABLE_0) >> 12;
+  for (int i = 0; i < 1024; i++)
+  {
     kpt[i].attrs = 0x3; // Present y RW
-    kpt[i].page=i;
+    kpt[i].page = i;
   }
-  kpd[0].attrs= 0x3;
-  kpd[0].pt=((uint32_t)kpt)<<12;
 
   return KERNEL_PAGE_DIR;
-} //rta a pregunta: Hace falta solo una entrada de Directorio de página que me deje configurar la tabla de?
+} // rta a pregunta: Hace falta solo una entrada de Directorio de página que me deje configurar la tabla de?
 
 /**
  * mmu_map_page agrega las entradas necesarias a las estructuras de paginación de modo de que
@@ -98,7 +105,23 @@ paddr_t mmu_init_kernel_dir(void) {
  * @param phy la dirección física que debe ser accedida (dirección de destino)
  * @param attrs los atributos a asignar en la entrada de la tabla de páginas
  */
-void mmu_map_page(uint32_t cr3, vaddr_t virt, paddr_t phy, uint32_t attrs) {
+void mmu_map_page(uint32_t cr3, vaddr_t virt, paddr_t phy, uint32_t attrs)
+{
+  pd_entry_t *pd = CR3_TO_PAGE_DIR(cr3);           // un puntero a la base del directorio que quiero mappear
+  uint32_t directorio_index = VIRT_PAGE_DIR(virt); // la entrada del directorio que contiene la tabla
+  uint32_t tabla_index = VIRT_PAGE_TABLE(virt);    // la entrada de tabla que contiene la dirección física
+
+  pt_entry_t *pt = pd[directorio_index].pt;
+  if (!(pd[directorio_index].attrs & MMU_P)){
+    paddr_t nuevo_pt= mmu_next_free_kernel_page();
+    zero_page(nuevo_pt);
+    pd[directorio_index].pt=(nuevo_pt>>12);
+    pd[directorio_index].attrs = MMU_P;
+  }
+  pd[directorio_index].attrs |= attrs; // consultar
+
+  pt[tabla_index].attrs=attrs;
+  pt[tabla_index].page=phy>>12;
 }
 
 /**
@@ -106,8 +129,8 @@ void mmu_map_page(uint32_t cr3, vaddr_t virt, paddr_t phy, uint32_t attrs) {
  * @param virt la dirección virtual que se ha de desvincular
  * @return la dirección física de la página desvinculada
  */
-paddr_t mmu_unmap_page(uint32_t cr3, vaddr_t virt) {
-
+paddr_t mmu_unmap_page(uint32_t cr3, vaddr_t virt)
+{
 }
 
 #define DST_VIRT_PAGE 0xA00000
@@ -121,20 +144,35 @@ paddr_t mmu_unmap_page(uint32_t cr3, vaddr_t virt) {
  * Esta función mapea ambas páginas a las direcciones SRC_VIRT_PAGE y DST_VIRT_PAGE, respectivamente, realiza
  * la copia y luego desmapea las páginas. Usar la función rcr3 definida en i386.h para obtener el cr3 actual
  */
-void copy_page(paddr_t dst_addr, paddr_t src_addr) {
+void copy_page(paddr_t dst_addr, paddr_t src_addr)
+{
+  pd_entry_t* cr3_actual=rcr3();
+  
+  mmu_map_page(cr3_actual,DST_VIRT_PAGE,dst_addr,MMU_P | MMU_W);
+  mmu_map_page(cr3_actual,SRC_VIRT_PAGE,src_addr,MMU_P);
+
+  uint8_t * src =(uint8_t*)SRC_VIRT_PAGE;
+  uint8_t * dst =(uint8_t*)DST_VIRT_PAGE;
+  
+  dst[0] = src[0];
+  // un for de tamañano de pagina asingando a dst lo que esta en src
+  // despues desmapeamos
+  
 }
 
- /**
+/**
  * mmu_init_task_dir inicializa las estructuras de paginación vinculadas a una tarea cuyo código se encuentra en la dirección phy_start
  * @pararm phy_start es la dirección donde comienzan las dos páginas de código de la tarea asociada a esta llamada
  * @return el contenido que se ha de cargar en un registro CR3 para la tarea asociada a esta llamada
  */
-paddr_t mmu_init_task_dir(paddr_t phy_start) {
+paddr_t mmu_init_task_dir(paddr_t phy_start)
+{
 }
 
-// COMPLETAR: devuelve true si se atendió el page fault y puede continuar la ejecución 
+// COMPLETAR: devuelve true si se atendió el page fault y puede continuar la ejecución
 // y false si no se pudo atender
-bool page_fault_handler(vaddr_t virt) {
+bool page_fault_handler(vaddr_t virt)
+{
   print("Atendiendo page fault...", 0, 0, C_FG_WHITE | C_BG_BLACK);
   // Chequeemos si el acceso fue dentro del area on-demand
   // En caso de que si, mapear la pagina
