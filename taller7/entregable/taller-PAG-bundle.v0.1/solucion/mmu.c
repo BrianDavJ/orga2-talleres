@@ -131,8 +131,30 @@ void mmu_map_page(uint32_t cr3, vaddr_t virt, paddr_t phy, uint32_t attrs)
  */
 paddr_t mmu_unmap_page(uint32_t cr3, vaddr_t virt)
 {
-}
 
+    //primero consigo la direc fisica que voy a desvincular, apartir de la virtual, asi devuelvo eso q nos piden/
+    //el cr3 me da la direccion de la page directory donde tengo que ir a buscar mi PDE y con eso mi PTE/
+    pd_entry_t* cr3_dir =  CR3_TO_PAGE_DIR(cr3); //puntero a la PD
+    
+    //son los indices a las pd y pt correspondientes de la direccion virtual que nos dan/
+    int32_t index_pt = VIRT_PAGE_TABLE(virt);
+    int32_t index_pd = VIRT_PAGE_DIR(virt);
+    int32_t index_offset = VIRT_PAGE_OFFSET(virt);
+    pd_entry_t PDE=cr3_dir[index_pd];
+    //vamos a preguntar si esta presente o no, si si lo esta hay que cambiar ese bit por no presente y realizar el tlbflush/
+    uint32_t base_pt =  (uint32_t)PDE.pt;  //aca tenemos el atributo PT, que son los 20bits que me dan la base de la PT/
+    //ya tenemos la base ahora queremos acceder a la PTE correspondiente/
+    uint32_t pt = base_pt + index_pt; //ya tenemos la PTE correspondiente, es decir, nuestro puntero a la iesima pagina/
+
+    pt_entry_t* punter_pt = pt;
+    paddr_t base_direc_phy = (uint32_t)punter_pt->page; //base a la direccion fisica/
+    paddr_t direc_phy = base_direc_phy + index_offset;  //ya tenemos la direcc que queremos devolver/
+    
+    if((punter_pt->attrs & MMU_P) == 0x01){ //estoy preguntando si el present esta en 1/
+      punter_pt->attrs = punter_pt->attrs && 0xFFE; //0b111111111110/
+      tlbflush();
+    }
+}
 #define DST_VIRT_PAGE 0xA00000
 #define SRC_VIRT_PAGE 0xB00000
 
