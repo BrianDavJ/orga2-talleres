@@ -1,0 +1,117 @@
+1. Si queremos definir un sistema que utilice sólo dos tareas, ¿Qué nuevas estructuras, cantidad de
+nuevas entradas en las estructuras ya definidas, y registros tenemos que configurar?¿Qué formato
+tienen? ¿Dónde se encuentran almacenadas?
+
+
+Tenemos que definir la Global Descriptor Table (GDT), armar el Task State Segment (TSS), cargar  el Task Register con el puntero a la TSS y el TSS descriptor en la GDT, asignar toda la estructura de paginación (con directorios y tablas para cada tarea), configurar el SO en sus habilitaciones básicas de interrup, segmentación y paginación.
+ Para inicializar la TSS de una tarea, tenemos que completar con la información inicial que posibilite la correcta ejecución de la tarea.
+ En la TSS vamos a tener los registros de propósito general de una tarea, los registros de segmento de la tarea y segmento de la pila de kernel (puntero al tope de pila de nivel 0 ESP0, el ESP y EBP), las flags, el CR3 con la dirección del Descriptor de página, el EIP  (xtnd Instruction Pointer, EFLAGS en 0x00000202 para tener las interrupciones habilitadas.
+
+2. ¿A qué llamamos cambio de contexto?¿Cuándo se produce?¿Qué efecto tiene sobre los registros
+del procesador? Expliquen en sus palabras que almacena el registro TR y cómo obtiene la
+información necesaria para ejecutar una tarea después de un cambio de contexto.
+
+
+ Llamamos cambio de contexto al pasaje de conjunto de registros y estructuras que guardamos en la TSS de una tarea a otro conjunto de los mismos. 
+ Esto se produce cuando el scheduler decide, con algún criterio, que el SO debe pasar de ejecutar una tarea a otra.
+ Esto cambia los valores de los registros del procesador que fueron cargados en la TSS y que van a ser usados en la ejecución del a tarea.
+ Similarmente al desarrollo o traducción que hacíamos en paginación el TR se utiliza con una parte que navega la GDT para elegir la TSS, otra de base de la TSS como una estructura mayor que contiene otras estructuras y otra que define el fin o tamaño de la TSS.
+
+
+3. Al momento de realizar un cambio de contexto el procesador va almacenar el estado actual de
+acuerdo al selector indicado en el registro TR y ha de restaurar aquel almacenado en la TSS cuyo
+selector se asigna en el jmp far. ¿Qué consideraciones deberíamos tener para poder realizar el
+primer cambio de contexto? ¿Y cuáles cuando no tenemos tareas que ejecutar o se encuentran
+todas suspendidas?
+
+ Dado que el procesador siempre precisa estar ejecutando una tarea, aunque esta no haga nada necesitamos definir dos tareas especiales: la tarea Inicial y la tarea Idle.
+
+ La tarea Inicial:
+ Apenas inicia el kernel hay que cargar la tarea Inicial. Para hacerlo, vamos a usar la instrucción LTR que toma como parámetro un registro de 16 bits con el selector de la tarea en la GDT.
+
+    LDTR ax ; (con ax = selector segmento tarea inicial)
+
+ Luego, hay que saltar a la tarea Idle. La forma de hacerlo es saltar al selector con un JMP y el valor que pongamos en
+offset es ignorado (podemos poner 0).
+
+    JMP SELECTOR TAREA IDLE:0
+
+ Esto va a cambiar el valor del registro TR apuntando a la TSS de la tarea Idle y producir el cambio de contexto. Saltar a una tarea es algo que lo va a hacer el Sistema Operativo en nivel 0.
+
+4. ¿Qué hace el scheduler de un Sistema Operativo? ¿A qué nos referimos con que usa una política?
+
+ El scheduler de un Sistema Operativo se encarga de asignar una cantidad de clocks de ejecución para las tareas que se le vayan pidiendo, asignarles un orden de ejecución e ir suspendiendo la ejecución para también realizar el cambio de una tarea a otra para copiar el estado actual de los registros, sus valores, en la TSS de la tarea en ejecución indicada por la TR. 
+ Cuando hablamos de política nos referimos a la regla o criterio para elegir cuál será la próxima tarea a ejecutar
+
+5. En un sistema de una única CPU, ¿cómo se hace para que los programas parezcan ejecutarse en simultáneo?
+
+ El scheduler organiza esta ilusión de simultaneidad al asignar lapsos suficientes para cargar y procesar la tarea de forma tal que lo que se muestras en pantalla o que uno percibe sea continuo aprovechando el tiempo que tardamos en percibir los resultados. Ejemplo el procesador puede llegar a cargar 5 segundos de video y en esos 5 segundos en los que un video se reproduce ejecutar o pre-procesar muchas otras tareas y despacharlas en un orden conveniente intercambiando los contextos y usando Buffers.
+
+
+11. a) Expliquen con sus palabras que se estaría ejecutando en cada tic del reloj línea por línea
+
+
+sched_task_offset: dd 0xFFFFFFFF
+sched_task_selector: dw 0xFFFF
+
+//Y siendo la siguiente una implementación de una interrupción del reloj:
+
+global _isr32
+_isr32:
+    pushad              //guardo los registros de prop gral anterior en la pila
+    call pic_finish1    //le aviso al pic que estoy manejando una interrup
+    call sched_next_task    //le pido al scheduler cual es la proxima tarea 
+    str cx              //guardo el valor el valor del selector de segmento actual (TR) en cx
+    cmp ax, cx          //veo si es la misma tarea que estaba ejecutandose antes
+    je .fin             //si es así voy a fin, sino continuo
+    mov word [sched_task_selector], ax  //muevo el valor de ax a la posc de memoria reservada para el selector
+    jmp far [sched_task_offset] //hago un jmp far al contenido de la dirección sched_task_offset
+.fin:
+popad
+iret
+
+
+b) En la línea que dice jmp far [sched_task_offset] ¿De que tamaño es el dato que estaría
+leyendo desde la memoria? ¿Qué indica cada uno de estos valores? ¿Tiene algún efecto el
+offset elegido?
+
+Es de 48 bits. sched_task_offset indica el selector de TSS de la GDT de la próxima tarea retornada por el scheduler. El offset
+
+c) ¿A dónde regresa la ejecución (eip) de una tarea cuando vuelve a ser puesta en ejecución?
+vuelve después del jmp far
+
+
+
+12. Para este Taller la cátedra ha creado un scheduler que devuelve la próxima tarea a ejecutar.
+a) En los archivos sched.c y sched.h se encuentran definidos los métodos necesarios para el
+Scheduler. Expliquen cómo funciona el mismo, es decir, cómo decide cuál es la próxima
+tarea a ejecutar. Pueden encontrarlo en la función sched_next_task.
+b) Modifiquen kernel.asm para llamar a la función sched_init luego de iniciar la TSS
+c) Compilen, ejecuten qemu y vean que todo sigue funcionando correctamente.
+
+-Round Robin
+
+
+14. Como parte de la inicialización del kernel, en kernel.asm se pide agregar una llamada a la función tasks_init de task.c que a su vez llama a create_task. Observe las siguientes líneas:
+
+int8_t task_id = sched_add_task(gdt_id << 3);
+tss_tasks[task_id] = tss_create_user_task(task_code_start[tipo]); //Crea una tss con los valores por defecto y el eip code_start
+gdt[gdt_id] = tss_gdt_entry_for_task(&tss_tasks[task_id]);
+
+a) ¿Qué está haciendo la función tss_gdt_entry_for_task?
+    crea una entrada de la gdt con las configuraciones necesarias para la TSS de la tarea task_id
+
+b) ¿Por qué motivo se realiza el desplzamiento a izquierda de gdt_id al pasarlo como parámetro de sched_add_task?
+
+Ya que el GDT descriptor usa los primeros 3 bits como control, bit 2 indica en que tabla de descriptores va GDT o LDT, y los bit 1 y 0 el nivel de privilegio de la solicitud.
+
+
+
+
+
+
+
+
+
+
+

@@ -124,11 +124,10 @@ modo_protegido:
     
     call mmu_init_kernel_dir
     
-    or eax, 1
     mov cr3,eax
     xor eax,eax
     mov eax, cr0
-    or eax,32
+    or eax,0x80000000
     mov cr0,eax
     
     sti

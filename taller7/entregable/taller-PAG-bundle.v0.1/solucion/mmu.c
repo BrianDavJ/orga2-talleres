@@ -153,6 +153,9 @@ paddr_t mmu_unmap_page(uint32_t cr3, vaddr_t virt)
     if((punter_pt->attrs & MMU_P) == 0x01){ //estoy preguntando si el present esta en 1/
       punter_pt->attrs = punter_pt->attrs && 0xFFE; //0b111111111110/
       tlbflush();
+    return direc_phy;  
+    } else {
+      return 0; //hay que devolver 0 ya que no hay ninguna pagina fisica asociada/
     }
 }
 #define DST_VIRT_PAGE 0xA00000
@@ -191,8 +194,34 @@ void copy_page(paddr_t dst_addr, paddr_t src_addr)
  */
 paddr_t mmu_init_task_dir(paddr_t phy_start)
 {
-}
+  // Primero hacemos el identity mapping del Kernel
+  //mmu_init_kernel_dir();
+  paddr_t cr3_actual=next_free_user_page;
+  
+  //Defino variables a usar para los mappeos de código, stack y mem_compartida
+ 
+  pd_entry_t *pd = (pd_entry_t *)0x25000;
+  kmemset((void *)pd, 0, 1024 * sizeof(pd_entry_t));
 
+  paddr_t code_virt=0x08000000;
+  paddr_t phy_end=phy_start+PAGE_SIZE;
+  
+  paddr_t stack_virt=0x08003000;
+  paddr_t stack_phy=next_free_user_page;
+  
+  paddr_t compartido_phy=phy_end+PAGE_SIZE;
+  paddr_t compartido_virt=stack_virt+PAGE_SIZE;
+
+  //Mapeo 2 pagínas de código que empieza en phy en la mem_virtual designada
+  mmu_map_page(pd,code_virt,phy_start,(MMU_U|MMU_P));
+  mmu_map_page(pd,code_virt+PAGE_SIZE,phy_start,(MMU_U|MMU_P));
+  //Mapeo la memoria de stack que pedimos al declarar la variable stack_phy a la mem_virtual designada
+  mmu_map_page(pd,stack_virt,stack_phy,(MMU_P|MMU_U|MMU_W));
+  //Mapeo la página compartida del kernel después del stack
+  mmu_map_page(pd,compartido_virt,compartido_phy,(MMU_U|MMU_P));
+  
+  return pd;
+}
 // COMPLETAR: devuelve true si se atendió el page fault y puede continuar la ejecución
 // y false si no se pudo atender
 bool page_fault_handler(vaddr_t virt)
