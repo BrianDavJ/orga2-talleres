@@ -1,0 +1,126 @@
+solución de alan 2do parcial orga2
+
+
+
+1a)
+	Asumo que las 6 tareas fueron inicializadas en el scheduler y nunca termina, es decir, cada una de ellas tiene una TSS y su descriptor correspondiente está en la GDT. Tanto los descriptores de las tareas de nivel 3, como las de nivel 0, tendrán los mismos atributos en el descritpor (DPL=0,S=0).
+	
+	Aún así la TSS de la tarea de nivel 0 deberá tener los selectores de segmento de código y datos de nivel 0 (GDT_CODE_0_SEL y GDT_DATA_0_SEL ).
+	
+	En nuestro sistema del taller no tenemos una función que inicialice tareas para que ejecuten a nivel 0, por lo que habría que tener esa función (hay que tener en cuenta qeu se debe pedir una página del kernel para el stack de la tarea).
+	
+	No hace falta pedir una página del kernel para el stack de nivel 0 (pues ya su stack de tareas propio es de nivel 0) por lo que el campo Esp0 de su TSS puede tener cualquier valor.
+	
+	También cabe notar que no hay una funcionque inicialice una estructura de paginación con páginas de código y datos de nivel 0 pues mmu_init_taks_dir crea estructuras de paginación con páginas de código y datos de nivel 3.
+
+	Asumo entonces que todas las tareas pueden ser inicializadas correctamente. Debo crear una entrada de la IDT para la syscall. Defino que su id es 47 (no se solapa con ningún código de excepción ni otra interrupción en nuestro sistema).
+
+	Debo entonces crear la entrada con la macro:
+		IDT_ENTRY3(47);
+	En la inicialización de la IDT notar que debe ser una interrupción con DPL=3  para que pueda ser invocada por cualquier tarea a nivel de user.
+
+1b) La idea de la isr es la siguiente:
+	Se está ejecutando la Tarea A y el scheduler define que la siguiente tarea a ejecutar es la B.
+	La tarea A hace la Syscall, por lo que se debe deshabilitar la ejecución de la tarea A en el scheduler y se debe habilitar la ejecución de la tarea 6. También se guarda en la memoria el id de la tarea A, para poder volver a ser habilitada.
+	Una vez hecho eso se hace un jmp far al TR de la tarea 6 lo que causa un cambio de contexto, guardando el estado de la Tarea A en su TSS y reestableciendo el contexto de la tarea 6 desde su TSS, por lo que la ejecución continua en el código de la Tarea 6. 
+	Notar que:
+	Cuando se cambia a la tarea 6 para el scheduler se sigue ejecutando la tarea A aunque no sea así. Esto se deja así para que cuando ocurra la interrupción de reloj durante la ejecución de la tarea 6 se cambie a la tarea B (que es la que sigue a A) alterando el orden de ejecución de tareas.
+	Cuando se vuelva a habilitar la tarea A su ejecución continua en el popad de la ISR47 luego se restauran los valores de sus registros y se vuelve a la ejecución de su código.
+	Cuando se produzca la interrupción de reloj se guarda el contexto de la tarea 6 por lo que su ejecución continuará en ese punto. El estado de la tarea A no cambia.
+	Al deshabilitar la tarea A, el scheduler la salteará al buscar la tarea que sigue al hace sched_next_task, por lo que se salteará a su tarea siguiente.
+	Ocurrirá lo mismo con la tarea 6, pues al estar habilitada será ejecutada si es la tarea siguiente en sched_next_task
+
+
+task_6_offset dd 0
+task_6_selector dw 0
+
+global _isr47
+_isr47:
+	pushad ;guardo los registros de propósito general de la tarea
+	push eax; mando el parámetro para la función habilitar_tarea
+	call habilitar_tarea_6
+	pop eax
+	jmp far [task_6_offset] ; hago  el cambio a la tarea 6
+							 task_6_selector es la parte de la memoria que guarda el TR de la tarea 6 para poder hacer el cambio de tareas. No es necesari odarle algun valor a task_6_offset pues será ignorado al hacer jmp far
+	popad
+	iret
+
+
+uint8_t habilitar_tarea_6 (uint32_t resultado) {// es de 32 bits por ser eax
+// Uso current_task como variable global y task_6_id 
+
+sched_disable_task(current_task);
+sched_enable_task(task_6_id);
+
+//ahora accedo a la TSS de la tarea 6 para que en eax reciba el resultado de la tarea A
+//Busco el selector de TSS de la tarea 6 en sched_entry_t, que tiene los descriptores de todas las tareas
+
+uint16_t index_t6_tss=sched_entry_t[task_6_id]>>3 //ignoro los bits RPL y T
+
+vaddr_t tss_t6_addr =(gdt[task_t6_id].base_31_24<<24) | (gdt[task_t6_id].base_23_16]<<16) | (gdt[task_t6_id].base_15_0);
+
+tss_t* tss_t6 = (tss_t*) tss_t6_addr;
+tss_t6->eax=resultado;
+
+// En todo el proceso anterior se accede al descriptor de TSS (que está en la GDT)
+// para luego acceder a la TSS de la tarea 6 y cambiarle el valor de su registro eax
+
+tarea_desalojada = current_task // Es una variable global del scheduler
+
+return current_task;
+
+}
+
+
+Esta parte de la memoria debe ser inicializada al iniciar la tarea 6 dentro de la memoria del kernel para que otra tarea la pueda modificar.
+
+1c)
+	Al restaurar su TSS, la tarea 6 tendrá en eax el resultado de la tarea A que la invocó. Esta tarea debe ser inicializada en el estado de PAUSE por el scheduler para que no se ejecute hasta que sea requerida.
+
+	TAREA 6{
+	while(true){
+		[inicializa sus varaibles]
+		[procesa el dato]
+		//una vez que procesado se debe cortar su ejecución 
+		//y seguir con la siguiente tarea
+		//Habilita la tarea A
+
+		sched_enable_task(tarea_desalojada);
+		sched_disable_task(task_6_id);
+		
+		cambiar_tarea();
+
+	}
+}
+	
+	global cambiar_tarea
+	Cambiar_tarea;
+		pushad
+		call sched_next_task
+		mov word [sched_task_selector],ax
+		jmp far [sched_task_offset]
+		popad
+		ret
+
+
+	Todo el procesamiento de la TAREA 6 se engloba en un ciclo que no termina. La idea de esto es que una vez la tarea 6 terminó su ejecución se deshabilita a si misma (pues al haber temrinado no puede seguir ejecutando) y habilita la ejecución de la tarea A (que fue la que llamó la syscall) para luego hacer el cambio de contexto a la tarea que le sigue en el scheduler.
+	Una vez hecho eso, si otra tarea B ejecuta la syscal encontrará el estado de la tarea 6 en el popad de la función cambiar tarea, hará el ret y así volverá al principio del ciclo para que la tarea 6 haga lo que tenga que hacer con el resultado de la tarea B.
+
+	Notar que:
+		De esta manera la tarea 6 nunca termina, sino que al finalizar su precesamiento al ser invocada de nuevo se vuelve al comienzo del mismo
+		La tarea puede hacer uso del scheduler por ser de nivel 0
+
+	En cambiar_tarea se hace el cambio muy similar a como lo hace la interrupción del reloj, se reutilizan las posiciones de memoria de sched_task_selector y offset porque no afecta su modificación en la interrupción de reloj pero  bien podrían haberla utilizado diferentes posiciones de memoria.
+
+1d) 
+	Como no fue necesario implementar la finalización de tareas no hay nada que cambiar en sched_next_task
+	Aun así, se hace uso de la función shced_disable_task que  no se utiliza en los talleres y también se hace uso de sched_enable_task por fuera de la inicialización de las tareas
+	Le agregan las variables globales:
+		task_6_id cuyo valor será asignada al tener el id de la tarea 6
+		tarea_desalojada será cambiado su valor caundo una tarea haga una syscall. Notar que se guarda su id.
+
+	Los problemas que pueden surgir son:
+		Que una tarea A llamó a la syscall la ejecución de la tarea 6 no finalizó y otra tarea B llama a la syscall. Si esto pasa no hay manera de reestablecer la ejecución de la tarea A porque se perderá el valor de tarea_desalojada (para solucionar esto se podría mantener una cola en la que se pushea en ella el id de la tarea y su resultado para procesar)<- Con esto no se puede mandar el resultado desde la TSS de la tarea 6 sino que el inicio del ciclo cargamos en eax el valor resultado de la cola.
+		De esta manera, la tarea 6 hace uso de la cola utilizando tanto el id como el resultado del tope de la cola. Al final del ciclo se desencola y solo termina su ejecución cuando la cola está vacía.
+		Que la propia tarea 6 llame al a syscall (no hacerlo)
+		Como nota no hay cambio de privilegio cuando la tarea 6 es interrumpida por el reloj pero no afecta en nada porque el iret debe detectar el privilegio de la tarea interrumpida.
