@@ -124,3 +124,33 @@ Esta parte de la memoria debe ser inicializada al iniciar la tarea 6 dentro de l
 		De esta manera, la tarea 6 hace uso de la cola utilizando tanto el id como el resultado del tope de la cola. Al final del ciclo se desencola y solo termina su ejecución cuando la cola está vacía.
 		Que la propia tarea 6 llame al a syscall (no hacerlo)
 		Como nota no hay cambio de privilegio cuando la tarea 6 es interrumpida por el reloj pero no afecta en nada porque el iret debe detectar el privilegio de la tarea interrumpida.
+
+
+//RESOLUCION BRIAN
+
+2)La idea es revisar todo el PD y PT en entradas válidas hasta encontrar la PTE que corresponda a esa entrada física y ver su tiene el bti D (dirty) prendido, si lo tiene devolvemos 0 (no escribir a disco) sino devuelve 1 (escribir).
+
+#DEFINE MM_D 0x40 //el bit 6 igual a 1
+uint8_t escribir_a_disco(int32 cr3, paddr_t phy){
+    paddr_t pd_addr (cr3 & 0xfffff000)
+    pd_entry_t * pd = (pd_entry_t *) pd_addr
+    uint8_t dirt=0
+    for (int i=0; i<1024;i++){
+        // Si el directorio es válido (esta present)
+        if ( pd[i].attrs & MM_P){
+            for (int j=0; j<1024;j++){
+                pt_entry_t* pt = pd[i];
+                //Si la PTE es la página que busco, es válido (está presente) y está modificada (dirty) 
+                if ( (pt[j].page<<12)==(phy & 0xfffff000) && pt[j].attrs & (MM_P|MM_D)){
+                    dirt=1;
+                    return dirt;
+                }
+            }
+        }
+    }
+    return dirt;
+}
+
+
+
+
