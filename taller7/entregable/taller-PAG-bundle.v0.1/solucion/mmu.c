@@ -11,6 +11,12 @@
 
 #include "kassert.h"
 
+#define TASK_CODE_VADDR   0x08000000
+#define TASK_STACK_VADDR  0x08003000
+#define TASK_SHARED_VADDR 0x08004000
+
+#define PD_ADDRESS  0x25000
+
 static pd_entry_t *kpd = (pd_entry_t *)KERNEL_PAGE_DIR;
 static pt_entry_t *kpt = (pt_entry_t *)KERNEL_PAGE_TABLE_0;
 
@@ -110,18 +116,17 @@ void mmu_map_page(uint32_t cr3, vaddr_t virt, paddr_t phy, uint32_t attrs)
   pd_entry_t *pd = CR3_TO_PAGE_DIR(cr3);           // un puntero a la base del directorio que quiero mappear
   uint32_t directorio_index = VIRT_PAGE_DIR(virt); // la entrada del directorio que contiene la tabla
   uint32_t tabla_index = VIRT_PAGE_TABLE(virt);    // la entrada de tabla que contiene la dirección física
-
-  pt_entry_t *pt = pd[directorio_index].pt;
+  
   if (!(pd[directorio_index].attrs & MMU_P)){
     paddr_t nuevo_pt= mmu_next_free_kernel_page();
     zero_page(nuevo_pt);
-    pd[directorio_index].pt=(nuevo_pt>>12);
-    pd[directorio_index].attrs = MMU_P;
+    pd[directorio_index].pt=(nuevo_pt<<12);
   }
   pd[directorio_index].attrs |= attrs; // consultar
-
+  pt_entry_t *pt = pd[directorio_index].pt<<12;
   pt[tabla_index].attrs=attrs;
-  pt[tabla_index].page=phy>>12;
+  pt[tabla_index].page=phy<<12;
+  tlbflush();
 }
 
 /**
@@ -195,38 +200,52 @@ void copy_page(paddr_t dst_addr, paddr_t src_addr)
 paddr_t mmu_init_task_dir(paddr_t phy_start)
 {
   // Primero hacemos el identity mapping del Kernel
-  //mmu_init_kernel_dir();
-  paddr_t cr3_actual=next_free_user_page;
-  
-  //Defino variables a usar para los mappeos de código, stack y mem_compartida
+  paddr_t cr3_actual=mmu_next_free_kernel_page();
  
-  pd_entry_t *pd = (pd_entry_t *)0x25000;
-  kmemset((void *)pd, 0, 1024 * sizeof(pd_entry_t));
+  for (int i = 0; i < 1024; i++)
+  {
+    // pt_f[i].attrs = 0x3; // Present y RW
+    // pt_f[i].page = i;
+    mmu_map_page(cr3_actual,i<<12,i<<12,0x3);
+  }
 
   paddr_t code_virt=0x08000000;
   paddr_t phy_end=phy_start+PAGE_SIZE;
   
   paddr_t stack_virt=0x08003000;
-  paddr_t stack_phy=next_free_user_page;
+  paddr_t stack_phy=mmu_next_free_user_page();
   
-  paddr_t compartido_phy=phy_end+PAGE_SIZE;
+  paddr_t compartido_phy=SHARED;
   paddr_t compartido_virt=stack_virt+PAGE_SIZE;
 
   //Mapeo 2 pagínas de código que empieza en phy en la mem_virtual designada
-  mmu_map_page(pd,code_virt,phy_start,(MMU_U|MMU_P));
-  mmu_map_page(pd,code_virt+PAGE_SIZE,phy_start,(MMU_U|MMU_P));
+  mmu_map_page(cr3_actual,code_virt,phy_start,(MMU_U|MMU_P));
+  mmu_map_page(cr3_actual,code_virt+PAGE_SIZE,phy_start,(MMU_U|MMU_P));
+
   //Mapeo la memoria de stack que pedimos al declarar la variable stack_phy a la mem_virtual designada
-  mmu_map_page(pd,stack_virt,stack_phy,(MMU_P|MMU_U|MMU_W));
+  mmu_map_page(cr3_actual,stack_virt-PAGE_SIZE,stack_phy,(MMU_P|MMU_U|MMU_W));
   //Mapeo la página compartida del kernel después del stack
-  mmu_map_page(pd,compartido_virt,compartido_phy,(MMU_U|MMU_P));
+  mmu_map_page(cr3_actual,compartido_virt,compartido_phy,(MMU_U|MMU_P));
   
-  return pd;
+  return cr3_actual;
 }
+
 // COMPLETAR: devuelve true si se atendió el page fault y puede continuar la ejecución
 // y false si no se pudo atender
 bool page_fault_handler(vaddr_t virt)
 {
+
   print("Atendiendo page fault...", 0, 0, C_FG_WHITE | C_BG_BLACK);
   // Chequeemos si el acceso fue dentro del area on-demand
+  if (virt<=ON_DEMAND_MEM_START_VIRTUAL && virt>=ON_DEMAND_MEM_END_VIRTUAL){
+    if (!(virt&MMU_P))
+    {
+      pd_entry_t* cr3=rcr3();
+      mmu_map_page(cr3,virt,ON_DEMAND_MEM_START_PHYSICAL,MMU_W|MMU_P);
+    }
+    return 1;
+  }
+  return 0;
   // En caso de que si, mapear la pagina
+
 }

@@ -11,18 +11,21 @@ extern IDT_DESC
 extern gdt
 extern screen_draw_box
 extern idt_init
-
+extern tss_init
 extern pic_enable
 extern pic_reset
 extern mmu_init_kernel_dir
-
+extern tasks_screen_draw
+extern sched_init
+extern tasks_init
 
 ; COMPLETAR - Agreguen declaraciones extern según vayan necesitando
 extern screen_draw_layout
 ; COMPLETAR - Definan correctamente estas constantes cuando las necesiten
 %define CS_RING_0_SEL 1 << 3  
 %define DS_RING_0_SEL 3 << 3  
-
+%define INIT_RING_0_SEL (11<<3)
+%define IDLE_RING_0_SEL (12<<3)
 
 BITS 16
 ;; Saltear seccion de datos
@@ -130,11 +133,21 @@ modo_protegido:
     or eax,0x80000000
     mov cr0,eax
     
+    call tss_init
+    call sched_init
+    
     sti
+    
     int 88
     int 98
 
     ; Ciclar infinitamente 
+    
+    mov ax, INIT_RING_0_SEL
+    ltr ax
+    call tasks_init
+    jmp IDLE_RING_0_SEL:0
+  
     mov eax, 0xFFFF
     mov ebx, 0xFFFF
     mov ecx, 0xFFFF
